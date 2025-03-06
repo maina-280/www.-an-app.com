@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let user = null;
+
+        document.getElementById("login-btn").addEventListener("click", async () => {
+            const result = await signInWithPopup(auth, provider);
+            user = result.user;
+            document.getElementById("user-info").innerHTML = `Welcome, ${user.displayName}`;
+            document.getElementById("chat-section").style.display = "block";
+        });
+
+        document.getElementById("send-btn").addEventListener("click", async () => {
+            const messageInput = document.getElementById("message-input");
+            if (messageInput.value.trim() !== "" && user) {
+                await addDoc(collection(db, "messages"), {
+                    text: messageInput.value,
+                    sender: user.displayName,
+                    timestamp: new Date()
+                });
+                messageInput.value = "";
+            }
+        });
+
+        onSnapshot(collection(db, "messages"), (snapshot) => {
+            const chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML = "";
+            snapshot.docs.forEach(doc => {
+                const msg = doc.data();
+                chatBox.innerHTML += `<p><strong>${msg.sender}:</strong> ${msg.text}</p>`;
+            });
+        });
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #chat-section { display: none; margin-top: 20px; }
+        #chat-box { border: 1px solid #ddd; padding: 10px; height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h2>Chat App</h2>
+    <button id="login-btn">Sign in with Google</button>
+    <div id="user-info"></div>
+    
+    <div id="chat-section">
+        <div id="chat-box"></div>
+        <input type="text" id="message-input" placeholder="Type a message">
+        <button id="send-btn">Send</button>
+    </div>
+</body>
+</html>
